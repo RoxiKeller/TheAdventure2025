@@ -15,4 +15,6 @@ public class TemporaryGameObject : RenderableGameObject
         Ttl = ttl;
         _spawnTime = DateTimeOffset.Now;
     }
+
+   
 }

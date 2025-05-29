@@ -1,0 +1,179 @@
+{
+  "rowCount": 10,
+  "columnCount": 10,
+  "frameWidth": 100,
+  "frameHeight": 100,
+  "frameCenter": {
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "fileName": "minotaur.png",
+  "animations": {
+    "IdleUp": {
+      "startFrame": {
+        "row": 0,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 0,
+        "col": 4
+      },
+      "durationMs": 1000,
+      "loop": true
+    },
+    "IdleDown": {
+      "startFrame": {
+        "row": 0,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 0,
+        "col": 4
+      },
+      "durationMs": 1000,
+      "loop": true
+    },
+    "IdleLeft": {
+      "startFrame": {
+        "row": 0,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 0,
+        "col": 4
+      },
+      "durationMs": 1000,
+      "loop": true,
+      "flip": 1
+    },
+    "IdleRight": {
+      "startFrame": {
+        "row": 0,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 0,
+        "col": 4
+      },
+      "durationMs": 1000,
+      "loop": true
+    },
+    "MoveLeft": {
+      "startFrame": {
+        "row": 1,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 1,
+        "col": 7
+      },
+      "durationMs": 1000,
+      "loop": true,
+      "flip": 1
+    },
+    "MoveRight": {
+      "startFrame": {
+        "row": 1,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 1,
+        "col": 7
+      },
+      "durationMs": 1000,
+      "loop": true,
+      "flip": 0
+    },
+    "MoveDown": {
+      "startFrame": {
+        "row": 1,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 1,
+        "col": 7
+      },
+      "durationMs": 1000,
+      "loop": true,
+      "flip": 0
+    },
+    "MoveUp": {
+      "startFrame": {
+        "row": 1,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 1,
+        "col": 7
+      },
+      "durationMs": 1000,
+      "loop": true,
+      "flip": 0
+    },
+    "AttackLeft": {
+      "startFrame": {
+        "row": 3,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 3,
+        "col": 8
+      },
+      "durationMs": 300,
+      "loop": true,
+      "flip": 1
+    },
+    "AttackRight": {
+      "startFrame": {
+        "row": 3,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 3,
+        "col": 9
+      },
+      "durationMs": 300,
+      "loop": true,
+      "flip": 0
+    },
+    "AttackDown": {
+      "startFrame": {
+        "row": 3,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 3,
+        "col": 9
+      },
+      "durationMs": 300,
+      "loop": true,
+      "flip": 0
+    },
+    "AttackUp": {
+      "startFrame": {
+        "row": 3,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 3,
+        "col": 9
+      },
+      "durationMs": 300,
+      "loop": true,
+      "flip": 0
+    },
+    "GameOver": {
+      "startFrame": {
+        "row": 9,
+        "col": 0
+      },
+      "endFrame": {
+        "row": 9,
+        "col": 5
+      },
+      "durationMs": 300,
+      "loop": false,
+      "flip": 0
+    }
+  }
+}

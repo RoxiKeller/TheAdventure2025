@@ -3,6 +3,7 @@ using System.Text.Json;
 using Silk.NET.Maths;
 using TheAdventure.Models;
 using TheAdventure.Models.Data;
+
 using TheAdventure.Scripting;
 
 namespace TheAdventure;
@@ -22,19 +23,40 @@ public class Engine
 
     private DateTimeOffset _lastUpdate = DateTimeOffset.Now;
 
+
+
+    public void AddEnemy(int x, int y)
+    {
+        SpriteSheet enemySprite = SpriteSheet.Load(_renderer, "Minotaur.json", "Assets");
+        EnemyObject enemy = new EnemyObject(enemySprite, new Vector2D<int>(x, y));
+
+        _gameObjects.Add(enemy.Id, enemy);
+    }
+
+
+
     public Engine(GameRenderer renderer, Input input)
     {
         _renderer = renderer;
         _input = input;
 
-        _input.OnMouseClick += (_, coords) => AddBomb(coords.x, coords.y);
+        _input.OnMouseClick += (_, _) =>
+        {
+            _player?.Attack();
+        };
+
+        _input.AddBombRequested += (_, coords) =>
+        {
+            AddBomb(coords.x, coords.y);
+        };
     }
+
 
     public void SetupWorld()
     {
         _player = new(SpriteSheet.Load(_renderer, "Player.json", "Assets"), 100, 100);
 
-        var levelContent = File.ReadAllText(Path.Combine("Assets", "terrain.tmj"));
+        var levelContent = File.ReadAllText(Path.Combine("Assets", "untitled.tmj"));
         var level = JsonSerializer.Deserialize<Level>(levelContent);
         if (level == null)
         {
@@ -75,6 +97,8 @@ public class Engine
         _currentLevel = level;
 
         _scriptEngine.LoadAll(Path.Combine("Assets", "Scripts"));
+
+        AddEnemy(200, 200);
     }
 
     public void ProcessFrame()
@@ -88,25 +112,30 @@ public class Engine
             return;
         }
 
-        double up = _input.IsUpPressed() ? 1.0 : 0.0;
-        double down = _input.IsDownPressed() ? 1.0 : 0.0;
-        double left = _input.IsLeftPressed() ? 1.0 : 0.0;
-        double right = _input.IsRightPressed() ? 1.0 : 0.0;
-        bool isAttacking = _input.IsKeyAPressed() && (up + down + left + right <= 1);
-        bool addBomb = _input.IsKeyBPressed();
+        // Update player position and input
+        double up = _input.IsWPressed() ? 1.0 : 0.0;
+        double down = _input.IsSPressed() ? 1.0 : 0.0;
+        double left = _input.IsAPressed() ? 1.0 : 0.0;
+        double right = _input.IsDPressed() ? 1.0 : 0.0;
 
         _player.UpdatePosition(up, down, left, right, 48, 48, msSinceLastFrame);
-        if (isAttacking)
-        {
-            _player.Attack();
-        }
-        
-        _scriptEngine.ExecuteAll(this);
 
-        if (addBomb)
+        if (_input.IsSpacePressed())
         {
             AddBomb(_player.Position.X, _player.Position.Y, false);
         }
+
+        _scriptEngine.ExecuteAll(this);
+
+        
+        foreach (var obj in _gameObjects.Values)
+        {
+            if (obj is EnemyObject enemy && _player != null)
+            {
+                enemy.Update(msSinceLastFrame, new Vector2D<int>(_player.Position.X, _player.Position.Y));
+            }
+        }
+
     }
 
     public void RenderFrame()
@@ -126,35 +155,53 @@ public class Engine
     public void RenderAllObjects()
     {
         var toRemove = new List<int>();
+
         foreach (var gameObject in GetRenderables())
         {
             gameObject.Render(_renderer);
+
             if (gameObject is TemporaryGameObject { IsExpired: true } tempGameObject)
             {
                 toRemove.Add(tempGameObject.Id);
+
+                // Check if enemy is in blast range of this bomb
+                foreach (var obj in _gameObjects.Values)
+                {
+                    if (obj is EnemyObject enemy && !enemy.IsExpired)
+                    {
+                        var deltaX = Math.Abs(enemy.Position.X - tempGameObject.Position.X);
+                        var deltaY = Math.Abs(enemy.Position.Y - tempGameObject.Position.Y);
+
+                        // 32px blast radius in both directions (can be tweaked)
+                        if (deltaX < 32 && deltaY < 32)
+                        {
+                            enemy.TakeDamage(999); // Instantly kill enemy
+                        }
+                    }
+                }
+
+                
+                if (_player != null)
+                {
+                    var deltaX = Math.Abs(_player.Position.X - tempGameObject.Position.X);
+                    var deltaY = Math.Abs(_player.Position.Y - tempGameObject.Position.Y);
+                    if (deltaX < 32 && deltaY < 32)
+                    {
+                        _player.GameOver();
+                    }
+                }
             }
         }
 
+        
         foreach (var id in toRemove)
         {
-            _gameObjects.Remove(id, out var gameObject);
-
-            if (_player == null)
-            {
-                continue;
-            }
-
-            var tempGameObject = (TemporaryGameObject)gameObject!;
-            var deltaX = Math.Abs(_player.Position.X - tempGameObject.Position.X);
-            var deltaY = Math.Abs(_player.Position.Y - tempGameObject.Position.Y);
-            if (deltaX < 32 && deltaY < 32)
-            {
-                _player.GameOver();
-            }
+            _gameObjects.Remove(id);
         }
 
         _player?.Render(_renderer);
     }
+
 
     public void RenderTerrain()
     {
