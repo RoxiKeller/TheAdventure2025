@@ -8,8 +8,6 @@ public unsafe class Input
 
     public EventHandler<(int x, int y)>? OnMouseClick;
     public EventHandler<(int x, int y)>? AddBombRequested;
-
-
     public Input(Sdl sdl)
     {
         _sdl = sdl;
@@ -45,14 +43,11 @@ public bool IsSpacePressed()
     return keyboardState[(int)KeyCode.Space] == 1;
 }
 
-
 public bool IsLeftMouseClicked(Event ev) =>
     ev.Type == (uint)EventType.Mousebuttondown && ev.Button.Button == (byte)MouseButton.Primary;
 
 public bool IsRightMouseClicked(Event ev) =>
     ev.Type == (uint)EventType.Mousebuttondown && ev.Button.Button == (byte)MouseButton.Secondary;
-
-
 
     public bool ProcessInput()
     {

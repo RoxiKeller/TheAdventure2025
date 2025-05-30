@@ -20,15 +20,19 @@ public unsafe class GameRenderer
 
     public GameRenderer(Sdl sdl, GameWindow window)
     {
+        var size = window.Size;
+        _screenWidth = size.Width;
+        _screenHeight = size.Height;
+
         _sdl = sdl;
-        
+        _window = window;
+
         _renderer = (Renderer*)window.CreateRenderer();
         _sdl.SetRenderDrawBlendMode(_renderer, BlendMode.Blend);
-        
-        _window = window;
-        var windowSize = window.Size;
-        _camera = new Camera(windowSize.Width, windowSize.Height);
+
+        _camera = new Camera(_screenWidth, _screenHeight);
     }
+
 
     public void SetWorldBounds(Rectangle<int> bounds)
     {
@@ -106,8 +110,71 @@ public unsafe class GameRenderer
         _sdl.RenderClear(_renderer);
     }
 
+    public void FillRect(Rectangle<int> rect)
+    {
+        var translatedRect = _camera.ToScreenCoordinates(rect);
+        _sdl.RenderFillRect(_renderer, in translatedRect);
+    }
+
+    public int GetScreenWidth()
+    {
+        return _screenWidth;
+    }
+
+    public int GetScreenHeight()
+    {
+        return _screenHeight;
+    }
+
+
+    private int _screenWidth;
+    private int _screenHeight;
+
+
+    public void DrawText(string text, int x, int y, int fontSize, byte r, byte g, byte b)
+    {
+        Console.WriteLine($"DrawText called: '{text}' at ({x},{y}) size={fontSize}");
+ 
+    }
+
+
     public void PresentFrame()
     {
         _sdl.RenderPresent(_renderer);
     }
+
+    public int CreateWhiteTexture()
+    {
+
+        byte[] whitePixel = { 255, 255, 255, 255 };
+
+        fixed (byte* data = whitePixel)
+        {
+            var surface = _sdl.CreateRGBSurfaceWithFormatFrom(
+                data,
+                1, 1, 32, 4,
+                (uint)PixelFormatEnum.Rgba32
+            );
+
+            if (surface == null)
+            {
+                throw new Exception("Failed to create surface for white texture.");
+            }
+
+            var texture = _sdl.CreateTextureFromSurface(_renderer, surface);
+            if (texture == null)
+            {
+                _sdl.FreeSurface(surface);
+                throw new Exception("Failed to create texture from white surface.");
+            }
+
+            _sdl.FreeSurface(surface);
+
+            _textureData[_textureId] = new TextureData { Width = 1, Height = 1 };
+            _texturePointers[_textureId] = (IntPtr)texture;
+
+            return _textureId++;
+        }
+    }
+
 }

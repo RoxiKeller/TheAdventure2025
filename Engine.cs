@@ -23,7 +23,7 @@ public class Engine
 
     private DateTimeOffset _lastUpdate = DateTimeOffset.Now;
 
-
+    private int _whiteTextureId;
 
     public void AddEnemy(int x, int y)
     {
@@ -32,8 +32,6 @@ public class Engine
 
         _gameObjects.Add(enemy.Id, enemy);
     }
-
-
 
     public Engine(GameRenderer renderer, Input input)
     {
@@ -51,9 +49,30 @@ public class Engine
         };
     }
 
+    private void DrawHealthBar(int x, int y, int width, int height, int health, int maxHealth)
+    {
+        float hpPercent = Math.Clamp((float)health / maxHealth, 0f, 1f);
+
+        // Red background
+        DrawFilledRect(new Rectangle<int>(x, y, width, height), 255, 0, 0);
+
+        // Green foreground (current health)
+        int greenWidth = (int)(width * hpPercent);
+        if (greenWidth > 0)
+        {
+            DrawFilledRect(new Rectangle<int>(x, y, greenWidth, height), 0, 255, 0);
+        }
+    }
 
     public void SetupWorld()
     {
+        _whiteTextureId = _renderer.CreateWhiteTexture();
+
+        _deathTextureId = _renderer.LoadTexture("Assets/ulost.png", out var textureSize);
+        _deathImageWidth = textureSize.Width;  
+        _deathImageHeight = textureSize.Height; 
+
+
         _player = new(SpriteSheet.Load(_renderer, "Player.json", "Assets"), 100, 100);
 
         var levelContent = File.ReadAllText(Path.Combine("Assets", "untitled.tmj"));
@@ -127,15 +146,59 @@ public class Engine
 
         _scriptEngine.ExecuteAll(this);
 
-        
         foreach (var obj in _gameObjects.Values)
         {
             if (obj is EnemyObject enemy && _player != null)
             {
+                // Move enemy
                 enemy.Update(msSinceLastFrame, new Vector2D<int>(_player.Position.X, _player.Position.Y));
+
+                double currentTimeMs = currentTime.ToUnixTimeMilliseconds();
+
+                // Enemy attacks player if close and enough time has passed
+                if (!enemy.IsDead &&
+                    Math.Abs(enemy.Position.X - _player.Position.X) < 32 &&
+                    Math.Abs(enemy.Position.Y - _player.Position.Y) < 32 &&
+                    enemy.CanAttack(currentTimeMs))
+                {
+                    _player.TakeDamage(enemy.GetDamage());
+                    enemy.Attack(currentTimeMs);
+                }
+
+                // Player attacks enemy
+                if (_player.State.State == PlayerObject.PlayerState.Attack &&
+                    !enemy.IsDead &&
+                    Math.Abs(enemy.Position.X - _player.Position.X) < 32 &&
+                    Math.Abs(enemy.Position.Y - _player.Position.Y) < 32)
+                {
+                    enemy.TakeDamage(_player.GetDamage());
+                }
             }
         }
 
+    }
+
+    private void DrawDeathScreen()
+    {
+        var screenWidth = _renderer.GetScreenWidth();
+        var screenHeight = _renderer.GetScreenHeight();
+
+        _renderer.SetDrawColor(0, 0, 0, 255);
+        _renderer.ClearScreen();
+
+        if (_deathTextureId == -1)
+            return;
+
+        var sourceRect = new Rectangle<int>(0, 0, _deathImageWidth, _deathImageHeight);
+        var destRect = new Rectangle<int>(
+            (screenWidth - _deathImageWidth) / 2,
+            (screenHeight - _deathImageHeight) / 2,
+            _deathImageWidth,
+            _deathImageHeight);
+
+        _renderer.RenderTexture(_deathTextureId, sourceRect, destRect);
+
+        _renderer.PresentFrame();
     }
 
     public void RenderFrame()
@@ -143,17 +206,27 @@ public class Engine
         _renderer.SetDrawColor(0, 0, 0, 255);
         _renderer.ClearScreen();
 
-        var playerPosition = _player!.Position;
+        if (_player == null)
+            return;
+
+        var playerPosition = _player.Position;
         _renderer.CameraLookAt(playerPosition.X, playerPosition.Y);
 
         RenderTerrain();
         RenderAllObjects();
+
+        // Death screen if player is dead
+        if (_player.IsDead)
+        {
+            DrawDeathScreen();
+        }
 
         _renderer.PresentFrame();
     }
 
     public void RenderAllObjects()
     {
+        
         var toRemove = new List<int>();
 
         foreach (var gameObject in GetRenderables())
@@ -169,39 +242,53 @@ public class Engine
                 {
                     if (obj is EnemyObject enemy && !enemy.IsExpired)
                     {
+
+
                         var deltaX = Math.Abs(enemy.Position.X - tempGameObject.Position.X);
                         var deltaY = Math.Abs(enemy.Position.Y - tempGameObject.Position.Y);
 
-                        // 32px blast radius in both directions (can be tweaked)
+                        // 32px blast radius in both directions
                         if (deltaX < 32 && deltaY < 32)
                         {
-                            enemy.TakeDamage(999); // Instantly kill enemy
+                            enemy.TakeDamage(100); // Instantly kill enemy
                         }
                     }
+
+
                 }
 
-                
                 if (_player != null)
                 {
                     var deltaX = Math.Abs(_player.Position.X - tempGameObject.Position.X);
                     var deltaY = Math.Abs(_player.Position.Y - tempGameObject.Position.Y);
                     if (deltaX < 32 && deltaY < 32)
                     {
-                        _player.GameOver();
+                        _player.TakeDamage(35); 
                     }
                 }
+
             }
+
         }
 
-        
         foreach (var id in toRemove)
         {
             _gameObjects.Remove(id);
         }
 
         _player?.Render(_renderer);
-    }
 
+        //  Player health bar
+        if (_player != null)
+        {
+            int healthBarX = _player.Position.X - 25;
+            int spriteHeight = 48;
+            int healthBarY = _player.Position.Y - spriteHeight - 10;
+
+            DrawHealthBar(healthBarX, healthBarY, 50, 6, _player.GetHealth(), _player.GetMaxHealth());
+        }
+
+    }
 
     public void RenderTerrain()
     {
@@ -251,6 +338,16 @@ public class Engine
     {
         return _player!.Position;
     }
+
+    private void DrawFilledRect(Rectangle<int> rect, byte r, byte g, byte b, byte a = 255)
+    {
+        _renderer.SetDrawColor(r, g, b, a);
+        _renderer.FillRect(rect);
+    }
+
+    private int _deathTextureId = -1;
+    private int _deathImageWidth = 0;
+    private int _deathImageHeight = 0;
 
     public void AddBomb(int X, int Y, bool translateCoordinates = true)
     {

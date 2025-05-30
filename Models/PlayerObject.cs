@@ -4,7 +4,32 @@ namespace TheAdventure.Models;
 
 public class PlayerObject : RenderableGameObject
 {
-    private const int _speed = 128; // pixels per second
+    private const int _speed = 128;
+    private int _health = 100;
+    private int _damage = 25;
+    private int _maxHealth = 100;
+
+    private int _hitsTaken = 0;  // Track how many times hit
+
+    public int GetHealth() => _health;
+    public int GetMaxHealth() => _maxHealth;
+    public bool IsDead => State.State == PlayerState.GameOver;
+
+    public int GetDamage() => _damage;
+
+    public void TakeDamage(int damage)
+    {
+        if (State.State == PlayerState.GameOver)
+            return;
+
+        _health -= damage;
+        if (_health < 0) _health = 0;
+
+        if (_health == 0)
+        {
+            GameOver();
+        }
+    }
 
     public enum PlayerStateDirection
     {
